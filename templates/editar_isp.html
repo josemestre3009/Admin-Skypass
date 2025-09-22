@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Editar ISP - SKY'A Admin{% endblock %}
+{% block page_title %}Editar ISP{% endblock %}
+{% block page_subtitle %}Modifica la información del ISP{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>
+                    Editar ISP: {{ isp.nombre }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="editarISPForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="nombre" class="form-label">
+                                <i class="fas fa-wifi me-1"></i> Nombre del ISP *
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="nombre" 
+                                   name="nombre" 
+                                   value="{{ isp.nombre }}"
+                                   required
+                                   placeholder="Ej: MiISP Colombia">
+                            <div class="form-text">Nombre identificativo del ISP</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="ip_vm" class="form-label">
+                                <i class="fas fa-server me-1"></i> IP de la Máquina Virtual *
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="ip_vm" 
+                                   name="ip_vm" 
+                                   value="{{ isp.ip_vm }}"
+                                   required
+                                   pattern="^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$"
+                                   placeholder="192.168.1.100">
+                            <div class="form-text">IP donde está alojada la VM del ISP</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="genieacs_url" class="form-label">
+                            <i class="fas fa-link me-1"></i> URL de GenieACS *
+                        </label>
+                        <input type="url" 
+                               class="form-control" 
+                               id="genieacs_url" 
+                               name="genieacs_url" 
+                               value="{{ isp.genieacs_url }}"
+                               required
+                               placeholder="http://192.168.1.100:3000">
+                        <div class="form-text">
+                            <strong>URL del servidor GenieACS:</strong><br>
+                            • Puerto 3000: Interfaz web (recomendado)<br>
+                            • Puerto 7557: API principal<br>
+                            • Ejemplo: http://192.168.1.100:3000
+                        </div>
+                        <div class="mt-2">
+                            <button type="button" onclick="probarConexion()" class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-wifi me-1"></i> Probar Conexión
+                            </button>
+                            <span id="conexion-status" class="ms-2"></span>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="limite_clientes" class="form-label">
+                                <i class="fas fa-users me-1"></i> Límite de Clientes *
+                            </label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="limite_clientes" 
+                                   name="limite_clientes" 
+                                   value="{{ isp.limite_clientes }}"
+                                   required
+                                   min="1"
+                                   placeholder="1000">
+                            <div class="form-text">Número máximo de dispositivos permitidos</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="email_alerta" class="form-label">
+                                <i class="fas fa-envelope me-1"></i> Email para Alertas
+                            </label>
+                            <input type="email" 
+                                   class="form-control" 
+                                   id="email_alerta" 
+                                   name="email_alerta"
+                                   value="{{ isp.email_alerta or '' }}"
+                                   placeholder="admin@miisp.com">
+                            <div class="form-text">Email donde recibir alertas (opcional)</div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Información actual:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Dispositivos actuales: <strong>{{ isp.dispositivos_actuales }}</strong></li>
+                            <li>Última verificación: {{ isp.ultima_verificacion.strftime('%d/%m/%Y %H:%M') if isp.ultima_verificacion else 'Nunca' }}</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('lista_isps') }}" class="btn btn-secondary btn-custom">
+                            <i class="fas fa-arrow-left me-2"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-custom">
+                            <i class="fas fa-save me-2"></i> Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('editarISPForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Validar IP
+    const ipInput = document.getElementById('ip_vm');
+    const ipPattern = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+    
+    if (!ipPattern.test(ipInput.value)) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Por favor ingresa una IP válida (ej: 192.168.1.100)'
+        });
+        ipInput.focus();
+        return;
+    }
+    
+    // Validar URL
+    const urlInput = document.getElementById('genieacs_url');
+    try {
+        new URL(urlInput.value);
+    } catch {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Por favor ingresa una URL válida (ej: http://192.168.1.100:7557)'
+        });
+        urlInput.focus();
+        return;
+    }
+    
+    // Mostrar loading
+    Swal.fire({
+        title: 'Guardando...',
+        text: 'Actualizando información del ISP',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        willOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    // Enviar formulario
+    const formData = new FormData(this);
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: data.message,
+                confirmButtonText: 'Continuar'
+            }).then(() => {
+                window.location.href = '{{ url_for("lista_isps") }}';
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data.message
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error al actualizar el ISP'
+        });
+    });
+});
+
+// Función para probar conexión con GenieACS
+function probarConexion() {
+    const url = document.getElementById('genieacs_url').value;
+    const statusSpan = document.getElementById('conexion-status');
+    
+    if (!url) {
+        statusSpan.innerHTML = '<span class="text-warning">Ingresa una URL primero</span>';
+        return;
+    }
+    
+    statusSpan.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin me-1"></i>Probando...</span>';
+    
+    fetch('/probar_conexion', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({url: url})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            statusSpan.innerHTML = `<span class="text-success"><i class="fas fa-check-circle me-1"></i>Conectado (${data.dispositivos} dispositivos)</span>`;
+        } else {
+            statusSpan.innerHTML = `<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Error: ${data.error}</span>`;
+        }
+    })
+    .catch(error => {
+        statusSpan.innerHTML = `<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Error de conexión</span>`;
+        console.error('Error:', error);
+    });
+}
+
+// Auto-completar URL basada en IP
+document.getElementById('ip_vm').addEventListener('input', function() {
+    const ip = this.value;
+    const urlInput = document.getElementById('genieacs_url');
+    
+    if (ip && !urlInput.value) {
+        urlInput.value = `http://${ip}:3000`;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,24 @@
+# INSTRUCCIONES PARA CONFIGURAR EL EMAIL
+# ========================================
+
+1. Crea un archivo llamado ".env" en la carpeta del proyecto
+2. Copia el contenido de "env.example" al archivo ".env"
+3. Edita el archivo ".env" con tus datos reales:
+
+GMAIL_USER=tu-email@gmail.com
+GMAIL_PASSWORD=tu-app-password-de-16-caracteres
+
+4. Para obtener la App Password:
+   - Ve a Google Account → Seguridad
+   - Activa la verificación en 2 pasos
+   - Busca "Contraseñas de aplicaciones"
+   - Genera una nueva para "Mail"
+   - Usa esa contraseña de 16 caracteres
+
+5. Reinicia la aplicación: python app.py
+
+# ¿Cómo saber si funciona?
+# ========================
+- Revisa el terminal: verás "Email enviado exitosamente"
+- Revisa tu bandeja de entrada
+- Ve a Configuración en la web para ver el estado

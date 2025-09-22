@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de ISPs - SKY'A Admin{% endblock %}
+{% block page_title %}Lista de ISPs{% endblock %}
+{% block page_subtitle %}Administra todos los ISPs registrados en el sistema{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('agregar_isp') }}" class="btn btn-primary btn-custom">
+    <i class="fas fa-plus me-2"></i> Agregar ISP
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-list me-2"></i>
+            Lista de ISPs ({{ isps|length }} total)
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if isps %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ISP</th>
+                            <th>IP VM</th>
+                            <th>GenieACS URL</th>
+                            <th>Dispositivos</th>
+                            <th>Límite</th>
+                            <th>Estado</th>
+                            <th>Última Verificación</th>
+                            <th>Email Alerta</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for isp in isps %}
+                        <tr>
+                            <td>
+                                <strong>{{ isp.nombre }}</strong>
+                            </td>
+                            <td>
+                                <code>{{ isp.ip_vm }}</code>
+                            </td>
+                            <td>
+                                {% if isp.genieacs_url %}
+                                    {% set ui_url = isp.genieacs_url %}
+                                    {% if ui_url.startswith('http://http://') %}
+                                        {% set ui_url = ui_url.replace('http://http://', 'http://') %}
+                                    {% elif ui_url.startswith('https://') %}
+                                        {% set ui_url = ui_url.replace('https://', 'http://') %}
+                                    {% elif not ui_url.startswith('http://') %}
+                                        {% set ui_url = 'http://' + ui_url %}
+                                    {% endif %}
+                                    {% if ':7557' in ui_url %}
+                                        {% set ui_url = ui_url.replace(':7557', ':3000') %}
+                                    {% elif not (':3000' in ui_url or ':7557' in ui_url) %}
+                                        {% set ui_url = ui_url + ':3000' %}
+                                    {% endif %}
+                                    <a href="{{ ui_url }}" target="_blank" class="text-decoration-none" title="Ir a GenieACS UI">
+                                        <i class="fas fa-external-link-alt me-1"></i>
+                                        GenieACS UI
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">No configurado</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="fw-bold" id="dispositivos-{{ isp.id }}">{{ isp.dispositivos_actuales }}</span>
+                            </td>
+                            <td>{{ isp.limite_clientes }}</td>
+                            <td>
+                                {% set porcentaje = (isp.dispositivos_actuales / isp.limite_clientes * 100) | round %}
+                                {% if porcentaje >= 100 %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-times-circle me-1"></i>Sobrepasado
+                                    </span>
+                                {% elif porcentaje >= 80 %}
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>Cerca del límite
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle me-1"></i>Normal
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if isp.ultima_verificacion %}
+                                    <small class="text-muted">
+                                        {{ isp.ultima_verificacion.strftime('%d/%m/%Y %H:%M') }}
+                                    </small>
+                                {% else %}
+                                    <small class="text-muted">Nunca</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if isp.email_alerta %}
+                                    <i class="fas fa-envelope text-success" title="{{ isp.email_alerta }}"></i>
+                                {% else %}
+                                    <i class="fas fa-envelope-slash text-muted"></i>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button onclick="verificarISP({{ isp.id }})" 
+                                            class="btn btn-outline-primary" 
+                                            title="Verificar dispositivos">
+                                        <i class="fas fa-sync"></i>
+                                    </button>
+                                    {% if isp.email_alerta %}
+                                    <button onclick="enviarEmailAlerta({{ isp.id }}, '{{ isp.nombre }}', {{ isp.dispositivos_actuales }}, {{ isp.limite_clientes }})" 
+                                            class="btn btn-outline-info" 
+                                            title="Enviar email de alerta">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                    {% endif %}
+                                    <a href="{{ url_for('editar_isp', isp_id=isp.id) }}" 
+                                       class="btn btn-outline-warning" 
+                                       title="Editar ISP">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button onclick="eliminarISP({{ isp.id }}, '{{ isp.nombre }}')" 
+                                            class="btn btn-outline-danger" 
+                                            title="Eliminar ISP">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-wifi fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No hay ISPs registrados</h5>
+                <p class="text-muted">Comienza agregando tu primer ISP al sistema</p>
+                <a href="{{ url_for('agregar_isp') }}" class="btn btn-primary btn-custom">
+                    <i class="fas fa-plus me-2"></i> Agregar Primer ISP
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal de confirmación -->
+{% endblock %}
+
+{% block scripts %}
+<script>
+function verificarISP(ispId) {
+    const btn = event.target.closest('button');
+    const icon = btn.querySelector('i');
+    
+    // Mostrar loading
+    icon.className = 'fas fa-spinner fa-spin';
+    btn.disabled = true;
+    
+    Swal.fire({
+        title: 'Verificando...',
+        text: 'Conectando con GenieACS',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        willOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    fetch(`/verificar_dispositivos/${ispId}`)
+        .then(response => response.json())
+        .then(data => {
+            // Actualizar dispositivos
+            document.getElementById(`dispositivos-${ispId}`).textContent = data.dispositivos_actuales;
+            
+            // Actualizar estado visual
+            const row = btn.closest('tr');
+            const estadoCell = row.querySelector('td:nth-child(6)');
+            const porcentaje = Math.round((data.dispositivos_actuales / data.limite_clientes) * 100);
+            
+            let badgeClass, iconClass, text;
+            if (porcentaje >= 100) {
+                badgeClass = 'bg-danger';
+                iconClass = 'fas fa-times-circle';
+                text = 'Sobrepasado';
+            } else if (porcentaje >= 80) {
+                badgeClass = 'bg-warning';
+                iconClass = 'fas fa-exclamation-triangle';
+                text = 'Cerca del límite';
+            } else {
+                badgeClass = 'bg-success';
+                iconClass = 'fas fa-check-circle';
+                text = 'Normal';
+            }
+            
+            estadoCell.innerHTML = `<span class="badge ${badgeClass}"><i class="${iconClass} me-1"></i>${text}</span>`;
+            
+            // Mostrar mensaje de éxito
+            Swal.fire({
+                icon: 'success',
+                title: '¡Verificado!',
+                text: `Dispositivos actualizados: ${data.dispositivos_actuales}`,
+                timer: 2000,
+                showConfirmButton: false
+            });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Error al verificar dispositivos'
+            });
+        })
+        .finally(() => {
+            // Restaurar botón
+            icon.className = 'fas fa-sync';
+            btn.disabled = false;
+        });
+}
+
+function eliminarISP(ispId, ispNombre) {
+    Swal.fire({
+        title: '¿Eliminar ISP?',
+        text: `¿Estás seguro de que quieres eliminar "${ispNombre}"?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Mostrar loading
+            Swal.fire({
+                title: 'Eliminando...',
+                text: 'Eliminando ISP',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                willOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Eliminar ISP
+            fetch(`/eliminar_isp/${ispId}`)
+                .then(response => {
+                    if (response.ok) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Eliminado!',
+                            text: 'ISP eliminado correctamente',
+                            timer: 1500,
+                            showConfirmButton: false
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        throw new Error('Error al eliminar');
+                    }
+                })
+                .catch(error => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Error al eliminar el ISP'
+                    });
+                });
+        }
+    });
+}
+
+function enviarEmailAlerta(ispId, ispNombre, dispositivosActuales, limiteClientes) {
+    const porcentaje = Math.round((dispositivosActuales / limiteClientes) * 100);
+    
+    let tipoAlerta, icono, color;
+    if (dispositivosActuales > limiteClientes) {
+        tipoAlerta = "superado";
+        icono = "🚨";
+        color = "#dc3545";
+    } else if (porcentaje >= 80) {
+        tipoAlerta = "cerca del límite";
+        icono = "⚠️";
+        color = "#ffc107";
+    } else {
+        tipoAlerta = "cerca del límite";
+        icono = "⚠️";
+        color = "#ffc107";
+    }
+    
+    Swal.fire({
+        title: `${icono} Enviar Email de Alerta`,
+        html: `
+            <div class="text-start">
+                <p><strong>ISP:</strong> ${ispNombre}</p>
+                <p><strong>Dispositivos actuales:</strong> ${dispositivosActuales}</p>
+                <p><strong>Límite:</strong> ${limiteClientes}</p>
+                <p><strong>Porcentaje de uso:</strong> ${porcentaje}%</p>
+                <p><strong>Tipo de alerta:</strong> <span style="color: ${color};">${tipoAlerta}</span></p>
+            </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: color,
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: `${icono} Enviar Email`,
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Enviando email...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            fetch(`/enviar_email_alerta/${ispId}`)
+                .then(response => response.json())
+                .then(data => {
+                    Swal.close();
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Email enviado',
+                            text: data.message
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: data.message
+                        });
+                    }
+                })
+                .catch(error => {
+                    Swal.close();
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Error de conexión'
+                    });
+                });
+        }
+    });
+}
+
+// Auto-refresh cada 5 minutos
+setInterval(() => {
+    location.reload();
+}, 300000);
+</script>
+{% endblock %}

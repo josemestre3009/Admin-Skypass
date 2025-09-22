@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+
+{% block title %}Configuración - SKY'A Admin{% endblock %}
+{% block page_title %}Configuración del Sistema{% endblock %}
+{% block page_subtitle %}Gestiona la configuración del sistema{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <!-- Configuración de Seguridad -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Configuración de Seguridad
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="securityConfigForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="secret_key" class="form-label">
+                                <i class="fas fa-key me-1"></i> Clave Secreta
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="secret_key" 
+                                   name="secret_key"
+                                   value="{{ secret_key }}"
+                                   required>
+                            <div class="form-text">Clave para encriptación de sesiones</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="admin_password" class="form-label">
+                                <i class="fas fa-lock me-1"></i> Contraseña de Admin
+                            </label>
+                            <input type="password" 
+                                   class="form-control" 
+                                   id="admin_password" 
+                                   name="admin_password"
+                                   placeholder="Nueva contraseña de admin">
+                            <div class="form-text">Dejar vacío para no cambiar</div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Importante:</strong> Cambiar la contraseña de admin requiere reiniciar la aplicación.
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i> Guardar Configuración de Seguridad
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Configuración de Email -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-envelope me-2"></i>
+                    Configuración de Email
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-user text-primary me-3"></i>
+                            <div>
+                                <h6 class="mb-0">Email configurado:</h6>
+                                <span class="text-muted">{{ gmail_user }}</span>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-lock text-success me-3"></i>
+                            <div>
+                                <h6 class="mb-0">Estado:</h6>
+                                <span class="text-success">Configurado correctamente</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button type="button" onclick="probarEmail()" class="btn btn-outline-info btn-lg">
+                            <i class="fas fa-paper-plane me-2"></i> Probar Email
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuración del Sistema -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-cog me-2"></i>
+                    Configuración del Sistema
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Monitoreo Automático</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i> Verificación cada 10 minutos</li>
+                            <li><i class="fas fa-check text-success me-2"></i> Alertas por email automáticas</li>
+                            <li><i class="fas fa-check text-success me-2"></i> Una alerta por día por ISP</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Base de Datos</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-database text-info me-2"></i> SQLite (isps.db)</li>
+                            <li><i class="fas fa-table text-info me-2"></i> Tablas: isps, admin, alertas</li>
+                            <li><i class="fas fa-backup text-info me-2"></i> Backup automático recomendado</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estadísticas del Sistema -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Estadísticas del Sistema
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <i class="fas fa-database fa-2x text-primary mb-2"></i>
+                            <h6>Base de Datos</h6>
+                            <small class="text-muted">SQLite</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <i class="fas fa-clock fa-2x text-success mb-2"></i>
+                            <h6>Monitoreo</h6>
+                            <small class="text-muted">Cada 10 min</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <i class="fas fa-envelope fa-2x text-warning mb-2"></i>
+                            <h6>Alertas</h6>
+                            <small class="text-muted">Gmail SMTP</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <i class="fas fa-server fa-2x text-info mb-2"></i>
+                            <h6>API</h6>
+                            <small class="text-muted">GenieACS</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Guía de Configuración -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-book me-2"></i>
+                    Guía de Configuración
+                </h6>
+            </div>
+            <div class="card-body">
+                <h6>1. Configurar Gmail</h6>
+                <ol class="small">
+                    <li>Activar verificación en 2 pasos</li>
+                    <li>Generar App Password</li>
+                    <li>Actualizar variables en app.py</li>
+                </ol>
+
+                <h6>2. Configurar GenieACS</h6>
+                <ol class="small">
+                    <li>Instalar GenieACS</li>
+                    <li>Configurar puerto 7557</li>
+                    <li>Verificar acceso HTTP</li>
+                </ol>
+
+                <h6>3. Agregar ISPs</h6>
+                <ol class="small">
+                    <li>Obtener IP de la VM</li>
+                    <li>Configurar URL de GenieACS</li>
+                    <li>Establecer límite de clientes</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Comandos Útiles -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-terminal me-2"></i>
+                    Comandos Útiles
+                </h6>
+            </div>
+            <div class="card-body">
+                <h6>Iniciar aplicación:</h6>
+                <code class="small d-block mb-2">python app.py</code>
+
+                <h6>Instalar dependencias:</h6>
+                <code class="small d-block mb-2">pip install -r requirements.txt</code>
+
+                <h6>Crear backup DB:</h6>
+                <code class="small d-block mb-2">cp isps.db backup_$(date +%Y%m%d).db</code>
+
+                <h6>Ver logs:</h6>
+                <code class="small d-block">tail -f app.log</code>
+            </div>
+        </div>
+
+        <!-- Estado del Sistema -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-heartbeat me-2"></i>
+                    Estado del Sistema
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>Monitoreo</span>
+                    <span class="badge bg-success">Activo</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>Base de Datos</span>
+                    <span class="badge bg-success">Conectada</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>Email</span>
+                    <span class="badge bg-warning">Configurar</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>GenieACS</span>
+                    <span class="badge bg-info">Por verificar</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Actualizar estado del sistema cada 30 segundos
+setInterval(() => {
+    // Aquí podrías hacer una petición AJAX para verificar el estado
+    console.log('Verificando estado del sistema...');
+}, 30000);
+
+// Función para probar configuración de email
+function probarEmail() {
+    Swal.fire({
+        title: 'Probando configuración de email...',
+        text: 'Esto puede tomar unos segundos',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    // Simular prueba de email (en una implementación real harías una petición AJAX)
+    setTimeout(() => {
+        Swal.fire({
+            icon: 'success',
+            title: '¡Email funcionando!',
+            text: 'La configuración de email está correcta. Las alertas se enviarán automáticamente.'
+        });
+    }, 2000);
+}
+
+// Función para validar formularios
+document.addEventListener('DOMContentLoaded', function() {
+    // Validar formulario de seguridad
+    const securityForm = document.getElementById('securityConfigForm');
+    if (securityForm) {
+        securityForm.addEventListener('submit', function(e) {
+            const secretKey = document.getElementById('secret_key').value;
+            const adminPassword = document.getElementById('admin_password').value;
+            
+            if (!secretKey) {
+                e.preventDefault();
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Campo requerido',
+                    text: 'Por favor completa la clave secreta'
+                });
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

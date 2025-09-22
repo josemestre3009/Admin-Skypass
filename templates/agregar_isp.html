@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+
+{% block title %}Agregar ISP - SKY'A Admin{% endblock %}
+{% block page_title %}Agregar Nuevo ISP{% endblock %}
+{% block page_subtitle %}Registra un nuevo ISP en el sistema{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-plus me-2"></i>
+                    Información del ISP
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="ispForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="nombre" class="form-label">
+                                <i class="fas fa-wifi me-1"></i> Nombre del ISP *
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="nombre" 
+                                   name="nombre" 
+                                   required
+                                   placeholder="Ej: MiISP Colombia">
+                            <div class="form-text">Nombre identificativo del ISP</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="ip_vm" class="form-label">
+                                <i class="fas fa-server me-1"></i> IP de la Máquina Virtual *
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="ip_vm" 
+                                   name="ip_vm" 
+                                   required
+                                   pattern="^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$"
+                                   placeholder="192.168.1.100">
+                            <div class="form-text">IP donde está alojada la VM del ISP</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="genieacs_url" class="form-label">
+                            <i class="fas fa-link me-1"></i> URL de GenieACS *
+                        </label>
+                        <input type="url" 
+                               class="form-control" 
+                               id="genieacs_url" 
+                               name="genieacs_url" 
+                               required
+                               placeholder="http://192.168.1.100:3000">
+                        <div class="form-text">
+                            <strong>URL del servidor GenieACS:</strong><br>
+                            • Puerto 3000: Interfaz web (recomendado)<br>
+                            • Puerto 7557: API principal<br>
+                            • Ejemplo: http://192.168.1.100:3000
+                        </div>
+                        <div class="mt-2">
+                            <button type="button" onclick="probarConexion()" class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-wifi me-1"></i> Probar Conexión
+                            </button>
+                            <span id="conexion-status" class="ms-2"></span>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="limite_clientes" class="form-label">
+                                <i class="fas fa-users me-1"></i> Límite de Clientes *
+                            </label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="limite_clientes" 
+                                   name="limite_clientes" 
+                                   required
+                                   min="1"
+                                   placeholder="1000">
+                            <div class="form-text">Número máximo de dispositivos permitidos</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="email_alerta" class="form-label">
+                                <i class="fas fa-envelope me-1"></i> Email para Alertas
+                            </label>
+                            <input type="email" 
+                                   class="form-control" 
+                                   id="email_alerta" 
+                                   name="email_alerta"
+                                   placeholder="admin@miisp.com">
+                            <div class="form-text">Email donde recibir alertas (opcional)</div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Información importante:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>El sistema verificará automáticamente los dispositivos cada 10 minutos</li>
+                            <li>Se enviará una alerta por email cuando se supere el límite</li>
+                            <li>Las alertas se envían máximo una vez por día por ISP</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('lista_isps') }}" class="btn btn-secondary btn-custom">
+                            <i class="fas fa-arrow-left me-2"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-custom">
+                            <i class="fas fa-save me-2"></i> Guardar ISP
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Información adicional -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-question-circle me-2"></i>
+                    ¿Necesitas ayuda?
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Configuración de GenieACS:</h6>
+                        <ul class="small text-muted">
+                            <li>Asegúrate de que GenieACS esté ejecutándose</li>
+                            <li>La URL debe ser accesible desde el servidor</li>
+                            <li>El puerto por defecto es 7557</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Configuración de Email:</h6>
+                        <ul class="small text-muted">
+                            <li>Usa una cuenta de Gmail válida</li>
+                            <li>Configura una App Password</li>
+                            <li>Las alertas se envían automáticamente</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('ispForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Validar IP
+    const ipInput = document.getElementById('ip_vm');
+    const ipPattern = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+    
+    if (!ipPattern.test(ipInput.value)) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Por favor ingresa una IP válida (ej: 192.168.1.100)'
+        });
+        ipInput.focus();
+        return;
+    }
+    
+    // Validar URL
+    const urlInput = document.getElementById('genieacs_url');
+    try {
+        new URL(urlInput.value);
+    } catch {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Por favor ingresa una URL válida (ej: http://192.168.1.100:7557)'
+        });
+        urlInput.focus();
+        return;
+    }
+    
+    // Mostrar loading
+    Swal.fire({
+        title: 'Guardando...',
+        text: 'Creando nuevo ISP',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        willOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    // Enviar formulario
+    const formData = new FormData(this);
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: data.message,
+                confirmButtonText: 'Continuar'
+            }).then(() => {
+                window.location.href = '{{ url_for("lista_isps") }}';
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data.message
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error al crear el ISP'
+        });
+    });
+});
+
+// Auto-completar URL basada en IP
+document.getElementById('ip_vm').addEventListener('input', function() {
+    const ip = this.value;
+    const urlInput = document.getElementById('genieacs_url');
+    
+    if (ip && !urlInput.value) {
+        urlInput.value = `http://${ip}:3000`;
+    }
+});
+
+// Función para probar conexión con GenieACS
+function probarConexion() {
+    const url = document.getElementById('genieacs_url').value;
+    
+    if (!url) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'URL requerida',
+            text: 'Ingresa una URL de GenieACS primero'
+        });
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Probando conexión...',
+        text: 'Conectando con GenieACS',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        willOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    fetch('/probar_conexion', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({url: url})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Conexión exitosa!',
+                text: `Se encontraron ${data.dispositivos} dispositivos conectados`,
+                timer: 3000,
+                showConfirmButton: false
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error de conexión',
+                text: data.error
+            });
+        }
+    })
+    .catch(error => {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error al probar la conexión'
+        });
+        console.error('Error:', error);
+    });
+}
+</script>
+{% endblock %}
