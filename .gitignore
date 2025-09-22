@@ -163,3 +163,6 @@ Thumbs.db
 *.pyc
 *.pyo
 *.pyd
+
+# Guía de producción (mantener en el repositorio)
+# PRODUCCION.txt
