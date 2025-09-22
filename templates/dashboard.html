@@ -45,8 +45,8 @@
     <div class="col-md-3">
         <div class="stats-card">
             <i class="fas fa-exclamation-triangle stats-icon text-warning"></i>
-            <div class="stats-number">{{ isps_cerca_limite|length }}</div>
-            <div class="stats-label">Cerca del Límite</div>
+            <div class="stats-number">{{ isps_problemas|length }}</div>
+            <div class="stats-label">Requieren Atención</div>
         </div>
     </div>
     
@@ -103,7 +103,7 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <button onclick="verificarISP({{ isp.id }})" class="btn btn-outline-primary btn-sm">
+                                    <button onclick='verificarISP({{ isp.id }})' class="btn btn-outline-primary btn-sm">
                                         <i class="fas fa-sync"></i>
                                     </button>
                                 </td>
@@ -191,7 +191,7 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <button onclick="verificarISP({{ isp.id }})" class="btn btn-outline-primary btn-sm" title="Verificar">
+                                    <button onclick='verificarISP({{ isp.id }})' class="btn btn-outline-primary btn-sm" title="Verificar">
                                         <i class="fas fa-sync"></i>
                                     </button>
                                     <a href="{{ url_for('editar_isp', isp_id=isp.id) }}" class="btn btn-outline-warning btn-sm" title="Editar">
@@ -237,25 +237,35 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for alerta in ultimas_alertas %}
-                            <tr>
-                                <td>{{ alerta.fecha_envio.strftime('%d/%m/%Y %H:%M') }}</td>
-                                <td><strong>{{ alerta.isp.nombre }}</strong></td>
-                                <td>{{ alerta.mensaje }}</td>
-                                <td>
-                                    <span class="badge bg-{% if alerta.enviada %}success{% else %}warning{% endif %}">
-                                        {% if alerta.enviada %}Enviada{% else %}Pendiente{% endif %}
-                                    </span>
-                                </td>
-                                <td>
-                                    <button onclick="reenviarAlerta({{ alerta.id }}, '{{ alerta.isp.nombre }}')" 
-                                            class="btn btn-outline-primary btn-sm" 
-                                            title="Reenviar alerta">
-                                        <i class="fas fa-paper-plane"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            {% endfor %}
+                            {% if ultimas_alertas %}
+                                {% for alerta in ultimas_alertas %}
+                                <tr>
+                                    <td>{{ alerta.fecha_envio.strftime('%d/%m/%Y %H:%M') if alerta.fecha_envio else 'N/A' }}</td>
+                                    <td><strong>{{ alerta.isp.nombre if alerta.isp else 'N/A' }}</strong></td>
+                                    <td>{{ alerta.mensaje if alerta.mensaje else 'Sin mensaje' }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if alerta.enviada %}success{% else %}warning{% endif %}">
+                                            {% if alerta.enviada %}Enviada{% else %}Pendiente{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if alerta.isp %}
+                                        <button onclick='reenviarAlerta({{ alerta.id }}, {{ alerta.isp.nombre|tojson|e }})' 
+                                                class="btn btn-outline-primary btn-sm" 
+                                                title="Reenviar alerta">
+                                            <i class="fas fa-paper-plane"></i>
+                                        </button>
+                                        {% else %}
+                                        <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">No hay alertas registradas</td>
+                                </tr>
+                            {% endif %}
                         </tbody>
                     </table>
                 </div>
@@ -268,6 +278,7 @@
 
 {% block scripts %}
 <script>
+// Funciones JavaScript para el Dashboard
 function verificarTodos() {
     Swal.fire({
         title: '¿Verificar todos los ISPs?',
@@ -285,7 +296,7 @@ function verificarTodos() {
                 text: 'Conectando con todos los servidores GenieACS',
                 allowOutsideClick: false,
                 showConfirmButton: false,
-                willOpen: () => {
+                didOpen: () => {
                     Swal.showLoading();
                 }
             });
@@ -312,7 +323,7 @@ function verificarISP(ispId) {
         text: 'Conectando con GenieACS',
         allowOutsideClick: false,
         showConfirmButton: false,
-        willOpen: () => {
+        didOpen: () => {
             Swal.showLoading();
         }
     });
@@ -339,7 +350,6 @@ function verificarISP(ispId) {
         });
 }
 
-// Función para reenviar alerta
 function reenviarAlerta(alertaId, ispNombre) {
     Swal.fire({
         title: '¿Reenviar alerta?',
@@ -392,5 +402,10 @@ function reenviarAlerta(alertaId, ispNombre) {
         }
     });
 }
+
+console.log('✅ Dashboard JavaScript cargado correctamente');
+console.log('✅ Función verificarTodos disponible:', typeof verificarTodos === 'function');
+console.log('✅ Función verificarISP disponible:', typeof verificarISP === 'function');
+console.log('✅ Función reenviarAlerta disponible:', typeof reenviarAlerta === 'function');
 </script>
 {% endblock %}
