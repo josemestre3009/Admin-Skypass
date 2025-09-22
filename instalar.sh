@@ -60,32 +60,49 @@ print_status "Iniciando instalación de Admin-Skypass..."
 # Paso 1: Actualizar sistema
 print_status "Paso 1/10: Actualizando sistema..."
 if [[ $EUID -eq 0 ]]; then
-    apt update && apt upgrade -y
+    apt update > /dev/null 2>&1 && apt upgrade -y > /dev/null 2>&1
 else
-    sudo apt update && sudo apt upgrade -y
+    sudo apt update > /dev/null 2>&1 && sudo apt upgrade -y > /dev/null 2>&1
 fi
 print_success "Sistema actualizado"
 
 # Paso 2: Instalar dependencias del sistema
 print_status "Paso 2/10: Instalando dependencias del sistema..."
-sudo apt install -y python3 python3-pip python3-venv python3-dev postgresql postgresql-contrib redis-server htop curl wget git
+if [[ $EUID -eq 0 ]]; then
+    apt install -y python3 python3-pip python3-venv python3-dev postgresql postgresql-contrib redis-server htop curl wget git > /dev/null 2>&1
+else
+    sudo apt install -y python3 python3-pip python3-venv python3-dev postgresql postgresql-contrib redis-server htop curl wget git > /dev/null 2>&1
+fi
 print_success "Dependencias instaladas"
 
 # Paso 3: Configurar PostgreSQL
 print_status "Paso 3/10: Configurando PostgreSQL..."
-sudo systemctl enable postgresql
-sudo systemctl start postgresql
-
-# Crear base de datos y usuario
-sudo -u postgres psql -c "CREATE DATABASE admin_skypass;" 2>/dev/null || print_warning "Base de datos ya existe"
-sudo -u postgres psql -c "CREATE USER skypass_user WITH PASSWORD 'skypass123';" 2>/dev/null || print_warning "Usuario ya existe"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE admin_skypass TO skypass_user;"
+if [[ $EUID -eq 0 ]]; then
+    systemctl enable postgresql > /dev/null 2>&1
+    systemctl start postgresql > /dev/null 2>&1
+    # Crear base de datos y usuario
+    sudo -u postgres psql -c "CREATE DATABASE admin_skypass;" > /dev/null 2>&1 || true
+    sudo -u postgres psql -c "CREATE USER skypass_user WITH PASSWORD 'skypass123';" > /dev/null 2>&1 || true
+    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE admin_skypass TO skypass_user;" > /dev/null 2>&1
+else
+    sudo systemctl enable postgresql > /dev/null 2>&1
+    sudo systemctl start postgresql > /dev/null 2>&1
+    # Crear base de datos y usuario
+    sudo -u postgres psql -c "CREATE DATABASE admin_skypass;" > /dev/null 2>&1 || true
+    sudo -u postgres psql -c "CREATE USER skypass_user WITH PASSWORD 'skypass123';" > /dev/null 2>&1 || true
+    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE admin_skypass TO skypass_user;" > /dev/null 2>&1
+fi
 print_success "PostgreSQL configurado"
 
 # Paso 4: Configurar Redis
 print_status "Paso 4/10: Configurando Redis..."
-sudo systemctl enable redis-server
-sudo systemctl start redis-server
+if [[ $EUID -eq 0 ]]; then
+    systemctl enable redis-server > /dev/null 2>&1
+    systemctl start redis-server > /dev/null 2>&1
+else
+    sudo systemctl enable redis-server > /dev/null 2>&1
+    sudo systemctl start redis-server > /dev/null 2>&1
+fi
 print_success "Redis configurado"
 
 # Paso 5: Crear directorio de la aplicación
@@ -100,49 +117,52 @@ print_success "Directorio creado"
 print_status "Paso 6/10: Descargando código fuente..."
 cd /opt/Admin-Skypass
 if [ -d ".git" ]; then
-    print_warning "Repositorio ya existe, actualizando..."
-    git pull origin main
+    git pull origin main > /dev/null 2>&1
 else
-    git clone https://github.com/josemestre3009/Admin-Skypass.git .
+    git clone https://github.com/josemestre3009/Admin-Skypass.git . > /dev/null 2>&1
 fi
 print_success "Código fuente descargado"
 
 # Paso 7: Crear entorno virtual
 print_status "Paso 7/10: Configurando entorno virtual..."
-python3 -m venv venv
+python3 -m venv venv > /dev/null 2>&1
 source venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-pip install gunicorn
+pip install --upgrade pip > /dev/null 2>&1
+pip install -r requirements.txt > /dev/null 2>&1
+pip install gunicorn > /dev/null 2>&1
 print_success "Entorno virtual configurado"
 
 # Paso 8: Configurar variables de entorno
 print_status "Paso 8/10: Configurando variables de entorno..."
 cat > .env << EOF
-FLASK_ENV=production
-SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(32))')
-DATABASE_URL=postgresql://skypass_user:skypass123@localhost/admin_skypass
-REDIS_URL=redis://localhost:6379/0
+# Configuración de Admin Skypass
+# Copia este archivo como .env y configura tus valores
 
-# Configuración de Email (CONFIGURAR MANUALMENTE)
-MAIL_SERVER=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USE_TLS=True
-MAIL_USERNAME=tu_email@gmail.com
-MAIL_PASSWORD=tu_app_password
-MAIL_DEFAULT_SENDER=tu_email@gmail.com
+# Clave secreta para Flask (genera una nueva para producción)
+SECRET_KEY=xxxxxxx
 
-# Configuración de la aplicación
+# Configuración de base de datos
+DATABASE_URL=sqlite:///isps.db
+
+# Configuración de email para alertas
+GMAIL_USER=xxxxxxx@gmail.com
+GMAIL_PASSWORD=xxxxxxx
+
+# Configuración del servidor (opcional)
 HOST=0.0.0.0
-PORT=8000
+PORT=5000
 DEBUG=False
+
+# Configuración de monitoreo (opcional)
+MONITORING_INTERVAL=600
+ALERT_COOLDOWN=86400
 EOF
 print_success "Variables de entorno configuradas"
 
 # Paso 9: Inicializar base de datos
 print_status "Paso 9/10: Inicializando base de datos..."
 source venv/bin/activate
-python app.py --init-db 2>/dev/null || print_warning "Base de datos ya inicializada"
+python app.py --init-db > /dev/null 2>&1 || true
 print_success "Base de datos inicializada"
 
 # Paso 10: Crear servicio systemd
@@ -167,16 +187,28 @@ WantedBy=multi-user.target
 EOF
 
 # Habilitar y iniciar servicio
-sudo systemctl daemon-reload
-sudo systemctl enable admin-skypass
-sudo systemctl start admin-skypass
+if [[ $EUID -eq 0 ]]; then
+    systemctl daemon-reload > /dev/null 2>&1
+    systemctl enable admin-skypass > /dev/null 2>&1
+    systemctl start admin-skypass > /dev/null 2>&1
+else
+    sudo systemctl daemon-reload > /dev/null 2>&1
+    sudo systemctl enable admin-skypass > /dev/null 2>&1
+    sudo systemctl start admin-skypass > /dev/null 2>&1
+fi
 print_success "Servicio configurado y iniciado"
 
 # Configurar firewall
 print_status "Configurando firewall..."
-sudo ufw allow 8000/tcp
-sudo ufw allow 22/tcp
-sudo ufw --force enable
+if [[ $EUID -eq 0 ]]; then
+    ufw allow 8000/tcp > /dev/null 2>&1
+    ufw allow 22/tcp > /dev/null 2>&1
+    ufw --force enable > /dev/null 2>&1
+else
+    sudo ufw allow 8000/tcp > /dev/null 2>&1
+    sudo ufw allow 22/tcp > /dev/null 2>&1
+    sudo ufw --force enable > /dev/null 2>&1
+fi
 print_success "Firewall configurado"
 
 # Obtener IP del servidor

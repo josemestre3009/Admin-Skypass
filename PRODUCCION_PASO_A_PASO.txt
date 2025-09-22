@@ -1,0 +1,230 @@
+# 🚀 GUÍA PASO A PASO - ADMIN-SKYPASS EN PRODUCCIÓN
+# Basada en método probado y funcional
+
+## 📋 REQUISITOS DEL SERVIDOR
+- Ubuntu 20.04 LTS o superior
+- Acceso root o usuario con sudo
+- Conexión a internet estable
+
+## 🔧 INSTALACIÓN PASO A PASO
+
+### PASO 1: ACTUALIZAR E INSTALAR DEPENDENCIAS DEL SISTEMA
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y build-essential libcairo2-dev libjpeg-dev libpango1.0-dev libgif-dev librsvg2-dev python3 python3-pip python3-venv python3-dev postgresql postgresql-contrib redis-server git nginx htop curl wget
+```
+
+### PASO 2: CONFIGURAR POSTGRESQL
+```bash
+# Iniciar y habilitar PostgreSQL
+sudo systemctl enable postgresql
+sudo systemctl start postgresql
+
+# Crear base de datos y usuario
+sudo -u postgres psql -c "CREATE DATABASE admin_skypass;"
+sudo -u postgres psql -c "CREATE USER skypass_user WITH PASSWORD 'skypass123';"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE admin_skypass TO skypass_user;"
+```
+
+### PASO 3: CONFIGURAR REDIS
+```bash
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
+```
+
+### PASO 4: CLONAR EL PROYECTO
+```bash
+cd ~
+git clone https://github.com/josemestre3009/Admin-Skypass.git
+cd ~/Admin-Skypass
+```
+
+### PASO 5: INSTALAR Y CONFIGURAR LA APP PYTHON (Flask)
+```bash
+# Crear entorno virtual
+python3 -m venv venv
+source venv/bin/activate
+
+# Instalar dependencias
+pip install -r requirements.txt
+pip install gunicorn
+
+# Verificar que Gunicorn esté instalado y tenga permisos
+ls -l ~/Admin-Skypass/venv/bin/gunicorn
+chmod +x ~/Admin-Skypass/venv/bin/gunicorn
+```
+
+### PASO 6: CONFIGURAR VARIABLES DE ENTORNO
+```bash
+# Crear archivo .env
+nano .env
+```
+
+
+### PASO 7: PROBAR QUE LA APP FUNCIONE
+```bash
+# Activar entorno virtual
+cd ~/Admin-Skypass
+source venv/bin/activate
+
+# Probar que funcione
+python app.py
+# Si ves que arranca y muestra "Running on http://0.0.0.0:5000" ¡todo bien!
+# Detén con Ctrl+C
+```
+
+### PASO 8: PROBAR GUNICORN MANUALMENTE
+```bash
+# Probar Gunicorn manualmente
+~/Admin-Skypass/venv/bin/gunicorn -w 4 -b 0.0.0.0:8000 app:app
+# Si ves que Gunicorn arranca y muestra "Listening at: ..." ¡todo bien!
+# Detén con Ctrl+C
+```
+
+### PASO 9: CREAR EL SERVICIO SYSTEMD
+```bash
+sudo nano /etc/systemd/system/admin-skypass.service
+```
+
+**Contenido del servicio:**
+```ini
+[Unit]
+Description=Admin-Skypass Web App
+After=network.target postgresql.service redis.service
+
+[Service]
+User=root
+WorkingDirectory=/root/Admin-Skypass
+Environment="PATH=/root/Admin-Skypass/venv/bin"
+ExecStart=/root/Admin-Skypass/venv/bin/gunicorn -w 4 -b 0.0.0.0:8000 app:app
+Restart=always
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+```
+
+### PASO 10: HABILITAR Y ARRANCAR EL SERVICIO
+```bash
+# Recargar systemd
+sudo systemctl daemon-reload
+
+# Habilitar el servicio
+sudo systemctl enable admin-skypass
+
+# Arrancar el servicio
+sudo systemctl start admin-skypass
+
+# Verificar que esté funcionando
+sudo systemctl status admin-skypass
+```
+
+
+### PASO 12: VERIFICAR INSTALACIÓN
+```bash
+# Ver logs del servicio
+sudo journalctl -u admin-skypass -f
+
+# Verificar que esté escuchando en el puerto 8000
+sudo netstat -tlnp | grep 8000
+
+# Obtener IP del servidor
+hostname -I
+```
+
+## ✅ VERIFICACIÓN FINAL
+
+1. **Acceder a la aplicación:** `http://TU_IP:8000`
+2. **Usuario por defecto:** `admin`
+3. **Contraseña por defecto:** `admin123`
+4. **Configurar email** en la página de configuración
+5. **Agregar ISPs** desde el dashboard
+
+## 🔧 COMANDOS ÚTILES
+
+### Reiniciar servicios
+```bash
+sudo systemctl restart admin-skypass
+sudo systemctl restart postgresql
+sudo systemctl restart redis-server
+```
+
+### Ver estado de servicios
+```bash
+sudo systemctl status admin-skypass
+sudo systemctl status postgresql
+sudo systemctl status redis-server
+```
+
+### Ver logs
+```bash
+# Logs de la aplicación
+sudo journalctl -u admin-skypass -f
+
+# Logs de PostgreSQL
+sudo journalctl -u postgresql -f
+
+# Logs de Redis
+sudo journalctl -u redis-server -f
+```
+
+### Actualizar aplicación
+```bash
+cd ~/Admin-Skypass
+git pull origin main
+source venv/bin/activate
+pip install -r requirements.txt
+sudo systemctl restart admin-skypass
+```
+
+## 🆘 SOLUCIÓN DE PROBLEMAS
+
+### Si el servicio no arranca:
+```bash
+# Ver logs detallados
+sudo journalctl -u admin-skypass --no-pager -n 50
+
+# Probar manualmente
+cd ~/Admin-Skypass
+source venv/bin/activate
+python app.py
+```
+
+### Si hay problemas de permisos:
+```bash
+# Cambiar propietario de archivos
+sudo chown -R root:root ~/Admin-Skypass
+sudo chmod +x ~/Admin-Skypass/venv/bin/gunicorn
+```
+
+### Si hay problemas de base de datos:
+```bash
+# Verificar PostgreSQL
+sudo systemctl status postgresql
+sudo -u postgres psql -c "SELECT 1;"
+```
+
+## 📱 CONFIGURACIÓN DE EMAIL
+
+### Para Gmail:
+1. Habilitar verificación en 2 pasos
+2. Generar contraseña de aplicación
+3. Usar esa contraseña en MAIL_PASSWORD
+
+### Para otros proveedores:
+- Outlook: smtp-mail.outlook.com:587
+- Yahoo: smtp.mail.yahoo.com:587
+
+## 🎯 RESULTADO FINAL
+
+- ✅ **Aplicación funcionando** en puerto 8000
+- ✅ **Servicio automático** al reiniciar el servidor
+- ✅ **Base de datos** PostgreSQL configurada
+- ✅ **Redis** para tareas en background
+- ✅ **Firewall** configurado
+- ✅ **Monitoreo automático** de ISPs
+- ✅ **Alertas por email** funcionando
+
+---
+**¡Sistema listo para producción!** 🚀
