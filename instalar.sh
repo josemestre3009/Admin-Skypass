@@ -40,8 +40,8 @@ echo -e "${NC}"
 
 # Verificar si es root
 if [[ $EUID -eq 0 ]]; then
-   print_error "No ejecutes este script como root. Usa un usuario normal con sudo."
-   exit 1
+   print_warning "Ejecutando como root. Esto no es recomendado pero se permitirá."
+   # No salir, continuar con la instalación
 fi
 
 # Verificar sistema operativo
@@ -59,7 +59,11 @@ print_status "Iniciando instalación de Admin-Skypass..."
 
 # Paso 1: Actualizar sistema
 print_status "Paso 1/10: Actualizando sistema..."
-sudo apt update && sudo apt upgrade -y
+if [[ $EUID -eq 0 ]]; then
+    apt update && apt upgrade -y
+else
+    sudo apt update && sudo apt upgrade -y
+fi
 print_success "Sistema actualizado"
 
 # Paso 2: Instalar dependencias del sistema
@@ -86,8 +90,10 @@ print_success "Redis configurado"
 
 # Paso 5: Crear directorio de la aplicación
 print_status "Paso 5/10: Preparando directorio de la aplicación..."
-sudo mkdir -p /opt/Admin-Skypass
-sudo chown -R $USER:$USER /opt/Admin-Skypass
+mkdir -p /opt/Admin-Skypass
+if [[ $EUID -ne 0 ]]; then
+    sudo chown -R $USER:$USER /opt/Admin-Skypass
+fi
 print_success "Directorio creado"
 
 # Paso 6: Clonar repositorio
