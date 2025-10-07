@@ -34,7 +34,7 @@ print_error() {
 echo -e "${BLUE}"
 echo "╔══════════════════════════════════════════════════════════════╗"
 echo "║                    ADMIN-SKYPASS INSTALLER                   ║"
-echo "║              Sistema de Monitoreo de ISPs                   ║"
+echo "║              Sistema de Monitoreo de ISPs                    ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
@@ -65,6 +65,15 @@ else
     sudo apt update > /dev/null 2>&1 && sudo apt upgrade -y > /dev/null 2>&1
 fi
 print_success "Sistema actualizado"
+
+# Ajustar zona horaria a América/Bogotá
+print_status "Ajustando zona horaria a America/Bogota..."
+if [[ $EUID -eq 0 ]]; then
+    timedatectl set-timezone America/Bogota > /dev/null 2>&1 || true
+else
+    sudo timedatectl set-timezone America/Bogota > /dev/null 2>&1 || true
+fi
+print_success "Zona horaria configurada"
 
 # Paso 2: Instalar dependencias del sistema
 print_status "Paso 2/10: Instalando dependencias del sistema..."
