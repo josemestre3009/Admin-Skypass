@@ -1,20 +1,27 @@
-# 🚀 GUÍA PASO A PASO - ADMIN-SKYPASS EN PRODUCCIÓN
-# Basada en método probado y funcional
+# 🚀 GUÍA DEFINITIVA - ADMIN-SKYPASS EN PRODUCCIÓN
+# Método probado y funcional - Paso a paso
 
 ## 📋 REQUISITOS DEL SERVIDOR
 - Ubuntu 20.04 LTS o superior
 - Acceso root o usuario con sudo
 - Conexión a internet estable
+- Mínimo: 2 CPU cores, 4GB RAM, 20GB disco
 
 ## 🔧 INSTALACIÓN PASO A PASO
 
 ### PASO 1: ACTUALIZAR E INSTALAR DEPENDENCIAS DEL SISTEMA
 ```bash
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y build-essential libcairo2-dev libjpeg-dev libpango1.0-dev libgif-dev librsvg2-dev python3 python3-pip python3-venv python3-dev postgresql postgresql-contrib redis-server git nginx htop curl wget
+sudo apt install -y build-essential python3 python3-pip python3-venv python3-dev postgresql postgresql-contrib redis-server git htop curl wget
 ```
 
-### PASO 2: CONFIGURAR POSTGRESQL
+### PASO 2: CONFIGURAR ZONA HORARIA (BOGOTÁ)
+```bash
+sudo timedatectl set-timezone America/Bogota
+timedatectl  # Verificar
+```
+
+### PASO 3: CONFIGURAR POSTGRESQL
 ```bash
 # Iniciar y habilitar PostgreSQL
 sudo systemctl enable postgresql
@@ -24,64 +31,94 @@ sudo systemctl start postgresql
 sudo -u postgres psql -c "CREATE DATABASE admin_skypass;"
 sudo -u postgres psql -c "CREATE USER skypass_user WITH PASSWORD 'skypass123';"
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE admin_skypass TO skypass_user;"
+
+# Verificar
+sudo systemctl status postgresql
 ```
 
-### PASO 3: CONFIGURAR REDIS
+### PASO 4: CONFIGURAR REDIS
 ```bash
 sudo systemctl enable redis-server
 sudo systemctl start redis-server
+
+# Verificar
+sudo systemctl status redis-server
 ```
 
-### PASO 4: CLONAR EL PROYECTO
+### PASO 5: CLONAR EL PROYECTO
 ```bash
-cd ~
+cd /root
 git clone https://github.com/josemestre3009/Admin-Skypass.git
-cd ~/Admin-Skypass
+cd /root/Admin-Skypass
 ```
 
-### PASO 5: INSTALAR Y CONFIGURAR LA APP PYTHON (Flask)
+### PASO 6: CREAR ENTORNO VIRTUAL E INSTALAR DEPENDENCIAS
 ```bash
 # Crear entorno virtual
 python3 -m venv venv
+
+# Activar entorno virtual
 source venv/bin/activate
 
 # Instalar dependencias
 pip install -r requirements.txt
-pip install gunicorn
 
-# Verificar que Gunicorn esté instalado y tenga permisos
-ls -l ~/Admin-Skypass/venv/bin/gunicorn
-chmod +x ~/Admin-Skypass/venv/bin/gunicorn
+# Verificar instalación
+pip list
 ```
 
-### PASO 6: CONFIGURAR VARIABLES DE ENTORNO
+### PASO 7: CONFIGURAR VARIABLES DE ENTORNO
 ```bash
-# Crear archivo .env
 nano .env
 ```
 
+**Contenido del archivo .env:**
+```env
+# Configuración de Admin Skypass
+SECRET_KEY=tu-clave-secreta-muy-segura-aqui-cambiala
 
-### PASO 7: PROBAR QUE LA APP FUNCIONE
+# Configuración de base de datos (usa SQLite por defecto)
+DATABASE_URL=sqlite:///isps.db
+
+# Configuración de email para alertas
+GMAIL_USER=tu-email@gmail.com
+GMAIL_PASSWORD=tu-app-password-de-16-caracteres
+
+# Configuración del servidor
+HOST=0.0.0.0
+PORT=5000
+DEBUG=False
+
+# Configuración de monitoreo
+MONITORING_INTERVAL=600
+ALERT_COOLDOWN=86400
+```
+
+**Guardar:** `Ctrl+O`, `Enter`, `Ctrl+X`
+
+### PASO 8: PROBAR QUE LA APP FUNCIONE
 ```bash
 # Activar entorno virtual
-cd ~/Admin-Skypass
+cd /root/Admin-Skypass
 source venv/bin/activate
 
 # Probar que funcione
 python app.py
-# Si ves que arranca y muestra "Running on http://0.0.0.0:5000" ¡todo bien!
+
+# Si ves "Running on http://0.0.0.0:5000" ¡todo bien!
 # Detén con Ctrl+C
 ```
 
-### PASO 8: PROBAR GUNICORN MANUALMENTE
+### PASO 9: PROBAR GUNICORN MANUALMENTE
 ```bash
 # Probar Gunicorn manualmente
 ~/Admin-Skypass/venv/bin/gunicorn -w 4 -b 0.0.0.0:8000 app:app
-# Si ves que Gunicorn arranca y muestra "Listening at: ..." ¡todo bien!
+
+# Si ves "Listening at: http://0.0.0.0:8000" ¡todo bien!
 # Detén con Ctrl+C
 ```
 
-### PASO 9: CREAR EL SERVICIO SYSTEMD
+### PASO 10: CREAR EL SERVICIO SYSTEMD
 ```bash
 sudo nano /etc/systemd/system/admin-skypass.service
 ```
@@ -105,12 +142,14 @@ StandardError=journal
 WantedBy=multi-user.target
 ```
 
-### PASO 10: HABILITAR Y ARRANCAR EL SERVICIO
+**Guardar:** `Ctrl+O`, `Enter`, `Ctrl+X`
+
+### PASO 11: HABILITAR Y ARRANCAR EL SERVICIO
 ```bash
 # Recargar systemd
 sudo systemctl daemon-reload
 
-# Habilitar el servicio
+# Habilitar el servicio (arranque automático)
 sudo systemctl enable admin-skypass
 
 # Arrancar el servicio
@@ -120,10 +159,24 @@ sudo systemctl start admin-skypass
 sudo systemctl status admin-skypass
 ```
 
-
-### PASO 12: VERIFICAR INSTALACIÓN
+### PASO 12: CONFIGURAR FIREWALL
 ```bash
-# Ver logs del servicio
+# Permitir puerto 8000 (aplicación)
+sudo ufw allow 8000/tcp
+
+# Permitir puerto 22 (SSH)
+sudo ufw allow 22/tcp
+
+# Habilitar firewall
+sudo ufw --force enable
+
+# Verificar reglas
+sudo ufw status
+```
+
+### PASO 13: VERIFICAR INSTALACIÓN
+```bash
+# Ver logs del servicio en tiempo real
 sudo journalctl -u admin-skypass -f
 
 # Verificar que esté escuchando en el puerto 8000
@@ -133,13 +186,26 @@ sudo netstat -tlnp | grep 8000
 hostname -I
 ```
 
-## ✅ VERIFICACIÓN FINAL
+## ✅ ACCESO A LA APLICACIÓN
 
-1. **Acceder a la aplicación:** `http://TU_IP:8000`
+1. **URL:** `http://TU_IP_SERVIDOR:8000`
 2. **Usuario por defecto:** `admin`
 3. **Contraseña por defecto:** `admin123`
-4. **Configurar email** en la página de configuración
-5. **Agregar ISPs** desde el dashboard
+
+## ⚙️ CONFIGURACIÓN POST-INSTALACIÓN
+
+### 1. Cambiar contraseña de admin
+- Ir a: Configuración → Cambiar contraseña
+
+### 2. Configurar email para alertas
+- Ir a: Configuración → Email
+- Configurar Gmail User y App Password
+- Probar envío de email
+
+### 3. Agregar ISPs
+- Ir a: Dashboard → Agregar ISP
+- Completar datos del ISP
+- Probar conexión con GenieACS
 
 ## 🔧 COMANDOS ÚTILES
 
@@ -159,8 +225,11 @@ sudo systemctl status redis-server
 
 ### Ver logs
 ```bash
-# Logs de la aplicación
+# Logs de la aplicación (tiempo real)
 sudo journalctl -u admin-skypass -f
+
+# Logs de la aplicación (últimas 50 líneas)
+sudo journalctl -u admin-skypass -n 50
 
 # Logs de PostgreSQL
 sudo journalctl -u postgresql -f
@@ -169,62 +238,148 @@ sudo journalctl -u postgresql -f
 sudo journalctl -u redis-server -f
 ```
 
-### Actualizar aplicación
+### Actualizar aplicación desde GitHub
 ```bash
-cd ~/Admin-Skypass
+cd /root/Admin-Skypass
 git pull origin main
 source venv/bin/activate
 pip install -r requirements.txt
 sudo systemctl restart admin-skypass
 ```
 
+### Detener/Iniciar aplicación
+```bash
+# Detener
+sudo systemctl stop admin-skypass
+
+# Iniciar
+sudo systemctl start admin-skypass
+
+# Reiniciar
+sudo systemctl restart admin-skypass
+```
+
 ## 🆘 SOLUCIÓN DE PROBLEMAS
 
-### Si el servicio no arranca:
+### ❌ Si el servicio no arranca:
 ```bash
 # Ver logs detallados
-sudo journalctl -u admin-skypass --no-pager -n 50
+sudo journalctl -u admin-skypass --no-pager -n 100
 
-# Probar manualmente
-cd ~/Admin-Skypass
+# Probar manualmente para ver errores
+cd /root/Admin-Skypass
 source venv/bin/activate
 python app.py
 ```
 
-### Si hay problemas de permisos:
+### ❌ Si hay error "ModuleNotFoundError":
 ```bash
-# Cambiar propietario de archivos
-sudo chown -R root:root ~/Admin-Skypass
-sudo chmod +x ~/Admin-Skypass/venv/bin/gunicorn
+cd /root/Admin-Skypass
+source venv/bin/activate
+pip install -r requirements.txt
+sudo systemctl restart admin-skypass
 ```
 
-### Si hay problemas de base de datos:
+### ❌ Si hay problemas de permisos:
+```bash
+sudo chown -R root:root /root/Admin-Skypass
+sudo chmod +x /root/Admin-Skypass/venv/bin/gunicorn
+sudo systemctl restart admin-skypass
+```
+
+### ❌ Si hay problemas de base de datos:
 ```bash
 # Verificar PostgreSQL
 sudo systemctl status postgresql
+
+# Probar conexión
 sudo -u postgres psql -c "SELECT 1;"
+
+# Ver bases de datos
+sudo -u postgres psql -l
 ```
 
-## 📱 CONFIGURACIÓN DE EMAIL
+### ❌ Si no se puede acceder desde el navegador:
+```bash
+# Verificar que esté escuchando
+sudo netstat -tlnp | grep 8000
 
-### Para Gmail:
-1. Habilitar verificación en 2 pasos
-2. Generar contraseña de aplicación
-3. Usar esa contraseña en MAIL_PASSWORD
+# Verificar firewall
+sudo ufw status
 
-### Para otros proveedores:
-- Outlook: smtp-mail.outlook.com:587
-- Yahoo: smtp.mail.yahoo.com:587
+# Verificar IP del servidor
+hostname -I
+```
+
+## 📱 CONFIGURACIÓN DE EMAIL (GMAIL)
+
+### Paso 1: Habilitar verificación en 2 pasos
+1. Ir a: https://myaccount.google.com/security
+2. Activar "Verificación en 2 pasos"
+
+### Paso 2: Generar contraseña de aplicación
+1. Ir a: https://myaccount.google.com/apppasswords
+2. Seleccionar "Correo" y "Otro (nombre personalizado)"
+3. Escribir: "Admin Skypass"
+4. Copiar la contraseña de 16 caracteres generada
+
+### Paso 3: Configurar en la aplicación
+1. Acceder a: http://TU_IP:8000
+2. Ir a: Configuración
+3. Pegar email y contraseña de aplicación
+4. Guardar y probar
 
 ## 🎯 RESULTADO FINAL
 
 - ✅ **Aplicación funcionando** en puerto 8000
 - ✅ **Servicio automático** al reiniciar el servidor
-- ✅ **Base de datos** PostgreSQL configurada
+- ✅ **Base de datos** SQLite configurada
 - ✅ **Redis** para tareas en background
 - ✅ **Firewall** configurado
-- ✅ **Monitoreo automático** de ISPs
+- ✅ **Zona horaria** Bogotá configurada
+- ✅ **Monitoreo automático** de ISPs cada 10 minutos
 - ✅ **Alertas por email** funcionando
 
+## 📊 MONITOREO
+
+### Ver uso de recursos
+```bash
+# Instalar htop si no está
+sudo apt install htop -y
+
+# Ver recursos
+htop
+
+# Ver uso de disco
+df -h
+
+# Ver uso de memoria
+free -h
+```
+
+### Backup manual
+```bash
+# Backup de base de datos SQLite
+cp /root/Admin-Skypass/instance/isps.db /root/backup_isps_$(date +%Y%m%d).db
+
+# Backup de configuración
+cp /root/Admin-Skypass/.env /root/backup_env_$(date +%Y%m%d).env
+```
+
 ---
-**¡Sistema listo para producción!** 🚀
+
+## 🚀 ¡INSTALACIÓN COMPLETADA!
+
+**Tu aplicación Admin-Skypass está lista para producción.**
+
+**Accede en:** `http://TU_IP_SERVIDOR:8000`
+
+**Repositorio:** https://github.com/josemestre3009/Admin-Skypass
+
+---
+
+**Notas importantes:**
+- Cambia la contraseña de admin después del primer login
+- Configura el email para recibir alertas
+- El monitoreo se ejecuta automáticamente cada 10 minutos
+- Los logs se guardan automáticamente en systemd

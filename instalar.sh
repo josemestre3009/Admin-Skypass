@@ -3,6 +3,7 @@
 # 🚀 SCRIPT DE INSTALACIÓN AUTOMÁTICA - ADMIN-SKYPASS
 # Autor: Jose Daniel
 # Versión: 1.0
+#curl -sSL https://raw.githubusercontent.com/josemestre3009/Admin-Skypass/main/instalar.sh | bash
 
 set -e  # Salir si hay algún error
 
